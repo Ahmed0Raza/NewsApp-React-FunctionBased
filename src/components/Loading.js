@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import loading from './loading.gif';
 
-export class Loading extends Component {
-  render() {
+const Loading= ()=> {
     return (
       <>
         <style>
@@ -18,7 +17,6 @@ export class Loading extends Component {
         </div>
       </>
     );
-  }
 }
 
 export default Loading;
