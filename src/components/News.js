@@ -1,77 +1,125 @@
-import React, { Component } from 'react'
-import NewsItem from './NewsItem'
+import React, { Component } from 'react';
+import NewsItem from './NewsItem';
 import Loading from './Loading';
+import InfiniteScroll from 'react-infinite-scroll-component';
 
 export class News extends Component {
   capitalizeFirstLetter(string) {
     if (!string) return '';
     return string.charAt(0).toUpperCase() + string.slice(1);
   }
-  constructor(props){
-    console.log("cons");
+
+  constructor(props) {
     super(props);
-    this.state={
-      articles:[],
+    this.state = {
+      articles: [],
       loading: false,
-      page:1,
-    }
-    document.title=`${this.capitalizeFirstLetter(this.props.category)} - NewsMonkey`;
+      page: 1,
+      totalResults: 0,
+      loadingMore: false, // Separate loading state for fetchMoreData
+      hasMore: true // Track if more data is available
+    };
+    document.title = `${this.capitalizeFirstLetter(this.props.category)} - NewsMonkey`;
   }
-  
-  
-  updateNews= async ()=>
-  {
-    let url=`https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=b28615b016cf466caf6c37e60544e0ff&page=${this.state.page}&pageSize=${this.props.pageSize}`;
-    this.setState({loading:true});
-    let data= await fetch(url);
-    let parsedData=await data.json();
-    this.setState({
-      articles: parsedData.articles,
-      totalResults:parsedData.totalResults,
-      loading:false
-    });
-  };
-  async componentDidMount()
-  {
-    console.log("did");
-    this.updateNews();
+
+  fetchMoreData = async () => {
+    try {
+      const newPage = this.state.page + 1;
+      let url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${newPage}&pageSize=${this.props.pageSize}`;
+      this.setState({ loadingMore: true });
+
+      let data = await fetch(url);
+      if (!data.ok) {
+        throw new Error(`HTTP error! status: ${data.status}`);
+      }
+      let parsedData = await data.json();
+      console.log('Fetched more data:', parsedData); // Debug: log API response
+
+      if (parsedData.articles.length === 0) {
+        this.setState({ hasMore: false, loadingMore: false });
+        return;
+      }
+
+      this.setState({
+        articles: this.state.articles.concat(parsedData.articles),
+        totalResults: parsedData.totalResults,
+        loadingMore: false,
+        page: newPage
+      });
+    } catch (error) {
+      console.error('Error fetching more data:', error);
+      this.setState({ loadingMore: false });
+    }
   };
 
-  handleNext= async ()=>{
-    this.setState({
-      page:this.state.page+1,
-    })
-    this.updateNews();
-   };
-  handlePrev= async ()=>{
-    this.setState({
-      page:this.state.page-1,
-    })
-    this.updateNews();
-  
+  updateNews = async () => {
+    try {
+      this.props.setProgress(0);
+      let url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=1&pageSize=${this.props.pageSize}`;
+      this.setState({ loading: true });
+
+      let data = await fetch(url);
+      if (!data.ok) {
+        throw new Error(`HTTP error! status: ${data.status}`);
+      }
+      let parsedData = await data.json();
+      console.log('Updated news:', parsedData); // Debug: log API response
+
+      this.setState({
+        articles: parsedData.articles,
+        totalResults: parsedData.totalResults,
+        loading: false,
+        page: 1,
+        hasMore: parsedData.articles.length < parsedData.totalResults // Check if there are more articles to load
+      });
+      this.props.setProgress(100);
+    } catch (error) {
+      console.error('Error updating news:', error);
+      this.setState({ loading: false });
+      this.props.setProgress(100);
+    }
   };
+
+  async componentDidMount() {
+    this.updateNews();
+  }
+
   render() {
-    {console.log("render");}
     return (
-      
-      <div className="container my-3" >
-        {this.state.loading &&  <Loading/>}
-        {!this.state.loading &&  <div className="row justify-content-center">
-        <h2 className="my-3" style={{textAlign:'center'}}>Top Headlines from {this.capitalizeFirstLetter(this.props.category)} Category</h2>
-        {this.state.articles.map((element)=>{
-          
-           return <div className="col-md-4 mb-4" key={element.url}>
-            <NewsItem title={element.title?element.title.slice(0,45):""} description={element.description?element.description.slice(0,85):""} imgUrl={element.urlToImage?element.urlToImage: "https://s.yimg.com/ny/api/res/1.2/YIP51uhgcdTAWtqjEOUo8g--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzU-/https://s.yimg.com/os/creatr-uploaded-images/2024-06/737ddb30-34ce-11ef-bff9-2d00abb28d0f"} newsUrl={element.url} author={element.author} date={element.publishedAt} source={element.source.name}/>
-            </div> 
-        })}
-        {<div className="d-flex justify-content-between">
-        <button disabled={this.state.page<=1} type="button" className="btn btn-dark" onClick={this.handlePrev}>&larr; Previous</button>
-        <button disabled={this.state.page===Math.ceil(this.state.totalResults/this.props.pageSize)} type="button" className="btn btn-dark" onClick={this.handleNext}>Next &rarr;</button>
-        </div>}
-        </div>}
-      </div>
-    )
+      <>
+        <InfiniteScroll
+          dataLength={this.state.articles.length}
+          next={this.fetchMoreData}
+          hasMore={this.state.hasMore}
+          loader={<Loading />}
+        >
+          {(this.state.loading || this.state.loadingMore) && <Loading />}
+          <div className='container' style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="row justify-content-center" style={{ width: '90%' }}>
+              {!this.state.loading && (
+                <h2 className="my-3" style={{ textAlign: 'center' }}>
+                  Top Headlines from {this.capitalizeFirstLetter(this.props.category)} Category
+                </h2>
+              )}
+              {this.state.articles.map((element) => (
+                <div className="col-md-3 mb-3" key={element.url}>
+                  <NewsItem
+                    title={element.title ? element.title.slice(0, 45) : ''}
+                    description={element.description ? element.description.slice(0, 85) : ''}
+                    imgUrl={element.urlToImage ? element.urlToImage : 'https://zvelo.com/wp-content/uploads/2018/11/anatomy-of-a-full-path-url-hostname-tld-path-protocol.jpg'}
+                    newsUrl={element.url}
+                    author={element.author}
+                    date={element.publishedAt}
+                    source={element.source.name}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </InfiniteScroll>
+      </>
+    );
   }
 }
 
-export default News
+export default News;
