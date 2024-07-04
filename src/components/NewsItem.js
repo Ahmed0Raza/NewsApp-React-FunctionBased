@@ -5,7 +5,7 @@ export class NewsItem extends Component {
     let { title, description, imgUrl, newsUrl, author, date, source } = this.props;
     return (
       <div className="card my-3" style={{ maxWidth: "320px", height: "100%", display: "flex", flexDirection: "column" }}>
-        <div className="container" style={{ position: "relative" }}>
+        <div className="container" style={{ position: "relative" }} >
           <span className="badge rounded-pill bg-danger" style={{ position: "absolute", top: "10px", right: "10px" }}>
             {source}
             <span className="visually-hidden">unread messages</span>
