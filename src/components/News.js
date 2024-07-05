@@ -58,6 +58,7 @@ const News = (props) => {
 
   useEffect(() => {
     updateNews();
+    document.title=`${capitalizeFirstLetter(props.category)} - NewsMonkey`;
   }, [props.country, props.category, props.apiKey, props.pageSize]);
 
   return (
@@ -70,7 +71,7 @@ const News = (props) => {
       >
         {(loading || loadingMore) && <Loading />}
         <div className='container' style={{ display: 'flex', justifyContent: 'center' }}>
-          <div className="row justify-content-center" style={{ width: '90%' }}>
+          <div className="row justify-content-center" style={{ width: '90%', marginTop:'65px'}}>
             {!loading && (
               <h2 className="my-3" style={{ textAlign: 'center' }}>
                 Top Headlines from {capitalizeFirstLetter(props.category)} Category
